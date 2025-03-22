@@ -1,0 +1,90 @@
+;
+; Rom template for M80 assembler
+;
+
+    	.Z80
+    	NAME ('romtst')
+
+		INCLUDE "rom.inc"
+
+ENASLT  EQU     0024h
+CHPUT   EQU     00A2h
+RSLREG 	EQU	    0138h
+EXPTBL	EQU	    0FCC1h	; Extended slot flags table (4 bytes)
+
+
+        ASEG
+	    ORG		4000h
+
+START_ADDRESS:
+	    DB      "AB"	; ID for auto-executable ROM
+	    DW	    START   ; Main program execution address.
+	    DW      0	    ; STATEMENT
+	    DW      0	    ; DEVICE
+	    DW      0	    ; TEXT
+	    DW      0,0,0	; Reserved
+
+;
+;   Main program:
+;
+
+START:  
+; Typical routine to select the ROM on page 8000h-BFFFh from page 4000h-7FFFh
+		call	GetSlotPage1
+		ld	    h,080h
+		call	ENASLT		; Select the ROM on page 8000h-BFFFh
+
+		; Switch to Page 1
+    	ld      a,1
+    	BNKCHG8
+    	ld      hl,8000h
+    	call    PrintText
+
+		; Switch to Page 2
+    	ld      a,2
+    	BNKCHG8
+    	ld      hl,8000h
+    	call    PrintText
+
+		; Halt program execution. Change to 'ret' to return to MSX-BASIC
+    	di
+    	halt
+            
+; Gets the slot selected in page 1 (4000h-7FFFh)
+; a <- slot ID
+GetSlotPage1:
+		call	RSLREG
+		rrca
+		rrca
+		and		3	;Keep bits corresponding to the page 4000h-7FFFh
+		ld		c,a
+		ld		b,0
+		ld		hl,EXPTBL
+		add		hl,bc
+		ld		a,(hl)
+		and		80h
+		or		c
+		ld		c,a
+		inc		hl
+		inc		hl
+		inc		hl
+		inc		hl
+		ld		a,(hl)
+		and		0Ch
+		or		c
+		ret
+
+; Prints the provided string on the screen
+; hl <- Address of text to print
+PrintText:
+    	ld      a,(hl)
+    	or      a
+    	ret     z
+    	call    CHPUT
+    	inc     hl
+    	jr      PrintText
+
+		; Reserve the rest of the space in the page
+    	BYTE_BLOCK	PAGESIZE-($-START_ADDRESS)
+
+		END

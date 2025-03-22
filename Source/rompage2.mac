@@ -1,0 +1,10 @@
+
+    .Z80
+
+    INCLUDE "rom.inc"
+
+    ORG 8000H
+
+DATA:
+    DB      "Rom page 2",ASCII_CR,ASCII_LF,0
+    BYTE_BLOCK PAGESIZE-($-DATA)
